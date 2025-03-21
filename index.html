@@ -1,0 +1,148 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+</head>
+<body>
+    <h1>WebSocket Chat</h1>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button id="sendButton">Send</button>
+    <button id="closeButton">Close Connection</button>
+    <script>
+        const socket = new WebSocket('ws://localhost:8080');
+        const messagesDiv = document.getElementById('messages'); // Define globally
+
+        socket.onopen = function(event) {
+            console.log('Connected to WebSocket server');
+        };
+
+        socket.onmessage = function(event) {
+            if (event.data instanceof Blob) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    messagesDiv.innerHTML += `<p><strong>Server: </strong>${reader.result}</p>`;
+                };
+                reader.readAsText(event.data); // Convert Blob to text
+            } else {
+                messagesDiv.innerHTML += `<p><strong>Server: </strong>${event.data}</p>`;
+            }
+        };
+
+        socket.onerror = function(error) {
+            console.error('WebSocket Error: ', error);
+        };
+
+        socket.onclose = function(event) {
+            console.log('Disconnected from WebSocket server');
+        };
+
+        const sendButton = document.getElementById('sendButton');
+        sendButton.onclick = function() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(message);
+                messagesDiv.innerHTML += `<p>You: ${message}</p>`;
+                messageInput.value = '';
+            } else {
+                console.log('Cannot send message: WebSocket is not open');
+            }
+        };
+
+        const closeButton = document.getElementById('closeButton');
+        closeButton.onclick = function() {
+            socket.close();
+            console.log('Connection closed by user');
+        };
+    </script>
+</body>
+</html> -->
+
+
+<!-- version 2 with timestand and unique client name -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+</head>
+<body>
+    <h1>WebSocket Chat</h1>
+    <input type="text" id="usernameInput" placeholder="Enter your username">
+    <button id="setUsername">Set Username</button>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button id="sendButton">Send</button>
+    <button id="closeButton">Close Connection</button>
+    <script>
+        const socket = new WebSocket('ws://localhost:8080');
+        const messagesDiv = document.getElementById('messages');
+        let username = 'Anonymous'; // Default username
+
+        socket.onopen = function(event) {
+            console.log('Connected to WebSocket server');
+        };
+
+        socket.onmessage = function(event) {
+            if (event.data instanceof Blob) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const messageData = JSON.parse(reader.result);
+                    messagesDiv.innerHTML += `<p><strong>${messageData.username}</strong> (${new Date(messageData.timestamp).toLocaleString()}): ${messageData.message}</p>`;
+                };
+                reader.readAsText(event.data);
+            } else {
+                const messageData = JSON.parse(event.data);
+                messagesDiv.innerHTML += `<p><strong>${messageData.username}</strong> (${new Date(messageData.timestamp).toLocaleString()}): ${messageData.message}</p>`;
+            }
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll to latest message
+        };
+
+        socket.onerror = function(error) {
+            console.error('WebSocket Error: ', error);
+        };
+
+        socket.onclose = function(event) {
+            console.log('Disconnected from WebSocket server');
+        };
+
+        document.getElementById('setUsername').onclick = function() {
+            const usernameInput = document.getElementById('usernameInput');
+            if (usernameInput.value.trim()) {
+                username = usernameInput.value.trim();
+                usernameInput.value = '';
+                socket.send(JSON.stringify({ type: 'setUsername', username }));
+            }
+        };
+
+        const sendButton = document.getElementById('sendButton');
+        sendButton.onclick = function() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            if (socket.readyState === WebSocket.OPEN && message.trim()) {
+                const messageData = {
+                    type: 'message',
+                    username: username,
+                    message: message,
+                    timestamp: new Date().toISOString()
+                };
+                socket.send(JSON.stringify(messageData));
+                messageInput.value = '';
+            } else {
+                console.log('Cannot send message: WebSocket is not open or message is empty');
+            }
+        };
+
+        const closeButton = document.getElementById('closeButton');
+        closeButton.onclick = function() {
+            socket.close();
+            console.log('Connection closed by user');
+        };
+    </script>
+</body>
+</html>
